@@ -1,15 +1,38 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 
+const vscode = window.acquireVsCodeApi ? window.acquireVsCodeApi() : null;
+
 const ChatBot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const chatEndRef = useRef(null);
-  const backendUrl = 'http://localhost:8080/chat'; // Replace with your actual endpoint
+  const backendUrl = 'http://localhost:8080/chat'; 
 
   useEffect(() => {
-    // Auto-scroll to bottom when messages update
+    if (!vscode) return;
+
+    // Notify extension host we're ready to receive history
+    vscode.postMessage({ command: 'ready' });
+
+    // Listen for messages from extension host
+    const handleMessage = event => {
+      const message = event.data;
+      if (message.command === 'loadHistory') {
+        setMessages(message.history || []);
+      }
+    };
+    window.addEventListener('message', handleMessage);
+
+    return () => window.removeEventListener('message', handleMessage);
+  }, []);
+
+  // Scroll chat and save history on messages update
+  useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+
+    // Save chat history back to extension host
+    vscode?.postMessage({ command: 'saveHistory', history: messages });
   }, [messages]);
 
   const handleSend = async () => {
@@ -130,6 +153,7 @@ const styles = {
   },
   text: {
     fontSize: '15px',
+    color: '#555',
   },
 };
 

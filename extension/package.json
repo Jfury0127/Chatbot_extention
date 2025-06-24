@@ -1,0 +1,28 @@
+{
+  "name": "chatbot-vscode",
+  "displayName": "ChatBot VSCode",
+  "description": "A VS Code extension to chat with your AI bot.",
+  "version": "1.0.0",
+  "engines": {
+    "vscode": "^1.80.0"
+  },
+  "categories": ["Other"],
+  "activationEvents": [
+    "onCommand:chatbot-vscode.openChat"
+  ],
+  "main": "./src/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "chatbot-vscode.openChat",
+        "title": "ChatBot: Open Chat"
+      }
+    ]
+  },
+  "scripts": {
+    "package": "vsce package"
+  },
+  "devDependencies": {
+    "vsce": "^2.20.0"
+  }
+}
