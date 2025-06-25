@@ -14,17 +14,20 @@ const openai = new OpenAI({
 
 app.post("/chat", async (req, res) => {
   try {
-    const { message } = req.body;
-    console.log(req.body)
-    if (!message) {
-      return res.status(400).json({ error: "Message is required" });
+    const { history } = req.body;
+
+    if (!history || !Array.isArray(history)) {
+      return res.status(400).json({ error: "History is required and must be an array" });
     }
+
+    const openAiMessages = history.map(msg => ({
+      role: msg.sender === 'user' ? 'user' : 'assistant',
+      content: msg.text
+    }));
 
     const completion = await openai.chat.completions.create({
       model: "gpt-4o-mini",
-      messages: [
-        { role: "user", content: message }
-      ]
+      messages: openAiMessages
     });
 
     const responseMessage = completion.choices[0]?.message?.content || "No response from model";
@@ -35,6 +38,7 @@ app.post("/chat", async (req, res) => {
     res.status(500).json({ error: "Something went wrong" });
   }
 });
+
 
 app.listen(8080, () => {
   console.log("Server is listening on port 8080");

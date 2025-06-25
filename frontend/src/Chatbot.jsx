@@ -7,15 +7,13 @@ const ChatBot = () => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
   const chatEndRef = useRef(null);
-  const backendUrl = 'http://localhost:8080/chat'; 
+  const backendUrl = 'http://localhost:8080/chat';
 
   useEffect(() => {
     if (!vscode) return;
 
-    // Notify extension host we're ready to receive history
     vscode.postMessage({ command: 'ready' });
 
-    // Listen for messages from extension host
     const handleMessage = event => {
       const message = event.data;
       if (message.command === 'loadHistory') {
@@ -23,15 +21,11 @@ const ChatBot = () => {
       }
     };
     window.addEventListener('message', handleMessage);
-
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
-  // Scroll chat and save history on messages update
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-    // Save chat history back to extension host
     vscode?.postMessage({ command: 'saveHistory', history: messages });
   }, [messages]);
 
@@ -39,10 +33,14 @@ const ChatBot = () => {
     if (!input.trim()) return;
 
     const userMessage = { sender: 'user', text: input };
-    setMessages(prev => [...prev, userMessage]);
+    const updatedMessages = [...messages, userMessage];
+    setMessages(updatedMessages);
 
     try {
-      const response = await axios.post(backendUrl, { message: input });
+      const response = await axios.post(backendUrl, {
+        history: updatedMessages,
+      });
+
       const botMessage = { sender: 'bot', text: response.data.message };
       setMessages(prev => [...prev, botMessage]);
     } catch (error) {
@@ -53,9 +51,18 @@ const ChatBot = () => {
     setInput('');
   };
 
+  const handleClearChat = () => {
+    setMessages([]);
+    vscode?.postMessage({ command: 'saveHistory', history: [] });
+  };
+
   return (
     <div style={styles.container}>
-      <h2 style={styles.header}>Chat with Bot</h2>
+      <div style={styles.headerContainer}>
+        <h2 style={styles.header}>Chat with Bot</h2>
+        <button onClick={handleClearChat} style={styles.clearButton}>🗑️</button>
+      </div>
+
       <div style={styles.chatBox}>
         {messages.map((msg, index) => (
           <div
@@ -72,6 +79,7 @@ const ChatBot = () => {
         ))}
         <div ref={chatEndRef} />
       </div>
+
       <div style={styles.inputBox}>
         <input
           type="text"
@@ -98,10 +106,23 @@ const styles = {
     fontFamily: 'Segoe UI, sans-serif',
     backgroundColor: '#ffffff',
   },
-  header: {
-    textAlign: 'center',
+  headerContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     marginBottom: '20px',
+  },
+  header: {
+    margin: 0,
     color: '#333',
+  },
+  clearButton: {
+    background: 'transparent',
+    border: 'none',
+    fontSize: '20px',
+    cursor: 'pointer',
+    color: '#888',
+    padding: '4px',
   },
   chatBox: {
     height: '400px',
