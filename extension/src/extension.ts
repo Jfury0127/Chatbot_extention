@@ -1,10 +1,14 @@
-const vscode = require('vscode');
-const path = require('path');
-const fs = require('fs');
+import * as vscode from 'vscode';
+import * as path from 'path';
+import * as fs from 'fs';
 
-function activate(context) {
-  // Retrieve saved chat history or default to empty array
-  let chatHistory = context.globalState.get('chatHistory', []);
+interface ChatMessage {
+  role: string;
+  content: string;
+}
+
+export function activate(context: vscode.ExtensionContext) {
+  let chatHistory: ChatMessage[] = context.globalState.get<ChatMessage[]>('chatHistory', []);
 
   const disposable = vscode.commands.registerCommand('chatbot-vscode.openChat', () => {
     const panel = vscode.window.createWebviewPanel(
@@ -19,12 +23,11 @@ function activate(context) {
       }
     );
 
-    // Read your frontend's built index.html
     const indexPath = path.join(context.extensionPath, 'media', 'index.html');
     let html = fs.readFileSync(indexPath, 'utf8');
 
-    // Fix asset paths so they load inside the webview
-    html = html.replace(/"(\/assets\/.*?)"/g, (_, assetPath) => {
+    // Fix asset paths
+    html = html.replace(/"(\/assets\/.*?)"/g, (_, assetPath: string) => {
       const assetUri = panel.webview.asWebviewUri(
         vscode.Uri.file(path.join(context.extensionPath, 'media', assetPath))
       );
@@ -33,17 +36,14 @@ function activate(context) {
 
     panel.webview.html = html;
 
-    // Listen for messages from the webview
-    panel.webview.onDidReceiveMessage(message => {
+    panel.webview.onDidReceiveMessage((message: any) => {
       switch (message.command) {
         case 'ready':
-          // When webview says it's ready, send saved chat history
           panel.webview.postMessage({ command: 'loadHistory', history: chatHistory });
           break;
 
         case 'saveHistory':
-          // Save updated chat history persistently
-          chatHistory = message.history;
+          chatHistory = message.history as ChatMessage[];
           context.globalState.update('chatHistory', chatHistory);
           break;
       }
@@ -53,9 +53,4 @@ function activate(context) {
   context.subscriptions.push(disposable);
 }
 
-function deactivate() {}
-
-module.exports = {
-  activate,
-  deactivate
-};
+export function deactivate() {}
